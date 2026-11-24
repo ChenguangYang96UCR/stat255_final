@@ -1,6 +1,11 @@
 # ISIC 2019 multimodal skin-lesion classification
 
-This repository implements the proposal's controlled comparison of metadata-only, image-only, and multimodal EfficientNet-B0 classifiers. It supports feature concatenation, gated fusion, decision-level fusion, attention fusion, optional bidirectional contrastive alignment, weighted cross-entropy, and focal loss.
+This repository implements metadata-only, image-only, and multimodal EfficientNet-B0 classifiers. The default task is binary classification:
+
+- `0 = benign`: `NV`, `BKL`, `DF`, `VASC`
+- `1 = concerning`: `MEL`, `BCC`, `SCC`, `AK`
+
+The name `concerning` is used instead of `unhealthy` because every ISIC image contains a skin lesion and `AK` is a precancerous lesion. The original eight-class task is still available with `--task multiclass`.
 
 ## 1. Put the official data in place
 
@@ -36,7 +41,19 @@ On a CUDA machine, install the matching PyTorch build from the official PyTorch 
 python prepare_data.py
 ```
 
-This joins tables by `image`, rejects duplicates and incomplete matches, checks image files, and writes `data/splits.csv`. It groups by `lesion_id`, then `patient_id`, when available; otherwise it falls back to the image identifier. The same split file is reused by every experiment.
+This joins the tables by `image` and filters samples while loading. Ground-truth rows with no matching metadata row are skipped. By default, a remaining sample is kept only when `age_approx`, `anatom_site_general`, `lesion_id`, and `sex` are all present and its image file exists. The original CSV and image directory are not changed; only valid image IDs are written to `data/splits.csv`. The split groups samples by `lesion_id`, then `patient_id`, when available, and otherwise falls back to the image identifier. The same split file is reused by every experiment.
+
+To require a different set of metadata fields, pass them explicitly:
+
+```bash
+python prepare_data.py --required-metadata age_approx sex anatom_site_general
+```
+
+For the original eight-class task, create a separate split file:
+
+```bash
+python prepare_data.py --task multiclass --output data/splits_multiclass.csv
+```
 
 ## 4. Train models
 
@@ -71,6 +88,8 @@ To run the full controlled comparison sequentially:
 python run_experiments.py
 ```
 
+`config.yaml` is set to `data.task: binary` and `data/splits_binary.csv`. To train the eight-class version, change both settings to `multiclass` and `data/splits_multiclass.csv`, or pass `--task multiclass` while using the matching split file.
+
 For a shorter initial check:
 
 ```bash
@@ -104,4 +123,4 @@ python compare_models.py \
 python -m pytest -q
 ```
 
-The tests cover metadata missingness/unknown categories and group leakage in the split.
+The tests cover load-time metadata/image filtering, metadata preprocessing, and group leakage in the split.

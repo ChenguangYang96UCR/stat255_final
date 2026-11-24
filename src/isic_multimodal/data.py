@@ -8,10 +8,10 @@ from PIL import Image
 from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold
 from torch.utils.data import Dataset
 
-from . import CLASSES
+from . import CLASSES, CONCERNING_DIAGNOSES
 
 
-def load_isic_tables(metadata_csv, ground_truth_csv):
+def load_isic_tables(metadata_csv, ground_truth_csv, drop_unmatched=False, task="multiclass"):
     meta = pd.read_csv(metadata_csv)
     truth = pd.read_csv(ground_truth_csv)
     if "image" not in meta or "image" not in truth:
@@ -25,13 +25,32 @@ def load_isic_tables(metadata_csv, ground_truth_csv):
     if not np.allclose(row_sums, 1.0):
         raise ValueError("Each ground-truth row must contain exactly one positive class.")
     truth = truth.copy()
-    truth["label"] = truth[CLASSES].to_numpy().argmax(axis=1)
+    truth["diagnosis"] = truth[CLASSES].idxmax(axis=1)
+    if task == "multiclass":
+        truth["label"] = truth[CLASSES].to_numpy().argmax(axis=1)
+    elif task == "binary":
+        truth["label"] = truth["diagnosis"].isin(CONCERNING_DIAGNOSES).astype(int)
+    else:
+        raise ValueError(f"Unknown classification task: {task}")
     if meta["image"].duplicated().any() or truth["image"].duplicated().any():
         raise ValueError("Duplicate image identifiers found in an input CSV.")
-    df = truth[["image", "label"]].merge(meta, on="image", how="left", validate="one_to_one")
-    if df[[c for c in meta.columns if c != "image"]].isna().all(axis=1).any():
-        bad = df.loc[df[[c for c in meta.columns if c != "image"]].isna().all(axis=1), "image"]
-        raise ValueError(f"Images without metadata: {bad.head().tolist()}")
+    df = truth[["image", "diagnosis", "label"]].merge(
+        meta,
+        on="image",
+        how="left",
+        validate="one_to_one",
+        indicator=True,
+    )
+    unmatched = df["_merge"].ne("both")
+    unmatched_count = int(unmatched.sum())
+    unmatched_examples = df.loc[unmatched, "image"].head().tolist()
+    if unmatched_count and not drop_unmatched:
+        raise ValueError(f"Images without metadata: {unmatched_examples}")
+    df = df.loc[~unmatched].drop(columns="_merge").reset_index(drop=True)
+    if df.empty:
+        raise ValueError("No matched rows remain after joining metadata and ground truth.")
+    df.attrs["dropped_unmatched_metadata"] = unmatched_count
+    df.attrs["unmatched_metadata_examples"] = unmatched_examples
     return df
 
 

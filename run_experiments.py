@@ -21,6 +21,7 @@ CORE_EXPERIMENTS = [
 def main():
     parser = argparse.ArgumentParser(description="Run the controlled core model comparison.")
     parser.add_argument("--config", default="config.yaml")
+    parser.add_argument("--task", choices=["binary", "multiclass"])
     parser.add_argument("--output-root", default="outputs/core")
     parser.add_argument("--quick", action="store_true", help="Run image, concat, and gated only.")
     parser.add_argument("--dry-run", action="store_true")
@@ -32,6 +33,8 @@ def main():
     for name, model_type, fusion, alignment in experiments:
         command = [sys.executable, "train.py", "--config", args.config, "--model-type", model_type,
                    "--alignment-weight", str(alignment), "--output-dir", str(Path(args.output_root) / name)]
+        if args.task:
+            command += ["--task", args.task]
         if fusion:
             command += ["--fusion", fusion]
         print(" ".join(command), flush=True)

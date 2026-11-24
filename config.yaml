@@ -1,9 +1,10 @@
 seed: 42
 data:
+  task: binary             # binary or multiclass
   image_dir: data/ISIC_2019_Training_Input
   metadata_csv: data/ISIC_2019_Training_Metadata.csv
   ground_truth_csv: data/ISIC_2019_Training_GroundTruth.csv
-  split_csv: data/splits.csv
+  split_csv: data/splits_binary.csv
   image_size: 224
   num_workers: 4
   batch_size: 32
@@ -30,5 +31,5 @@ training:
   alignment_temperature: 0.1
   early_stopping_patience: 5
   amp: true
-output_dir: outputs/concat
+output_dir: outputs/binary_concat
 
