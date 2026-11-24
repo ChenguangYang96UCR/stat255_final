@@ -82,10 +82,22 @@ python train.py --model-type multimodal --fusion concat \
 
 If the machine cannot download ImageNet weights, first obtain them in a networked environment or add `--no-pretrained` for a pipeline test. Training from scratch is not the proposal's intended final experiment.
 
-To run the full controlled comparison sequentially:
+To run the full controlled comparison, each experiment is trained with seeds 42, 43, and 44:
 
 ```bash
 python run_experiments.py
+```
+
+The data split stays fixed across seeds. The seeds change model initialization, data augmentation, and training order. Results are saved under `outputs/core/<experiment>/seed_<seed>/`. After all runs finish, the script writes:
+
+- `outputs/core/per_seed_results.csv`
+- `outputs/core/summary_mean_std.csv`
+- `outputs/core/summary_mean_std.json`
+
+Use a different seed list if needed:
+
+```bash
+python run_experiments.py --seeds 1 2 3
 ```
 
 `config.yaml` is set to `data.task: binary` and `data/splits_binary.csv`. To train the eight-class version, change both settings to `multiclass` and `data/splits_multiclass.csv`, or pass `--task multiclass` while using the matching split file.

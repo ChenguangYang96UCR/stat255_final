@@ -11,7 +11,8 @@ def test_binary_metrics_use_positive_class_probability():
         [0.3, 0.7],
         [0.1, 0.9],
     ])
-    result = calculate_metrics(labels, probabilities, ["benign", "concerning"])
+    # No class names are passed here because run_epoch uses the same call.
+    result = calculate_metrics(labels, probabilities)
     assert result["accuracy"] == 1.0
     assert result["auroc"] == 1.0
     assert result["concerning_sensitivity"] == 1.0

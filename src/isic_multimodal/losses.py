@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -25,7 +26,9 @@ def contrastive_alignment(image_embeddings, metadata_embeddings, temperature=0.1
 
 
 def class_weights(labels, num_classes=8):
-    counts = torch.bincount(torch.as_tensor(labels, dtype=torch.long), minlength=num_classes).float()
+    # Pandas can expose a read-only NumPy view; copy it before creating the tensor.
+    labels = torch.from_numpy(np.array(labels, dtype=np.int64, copy=True))
+    counts = torch.bincount(labels, minlength=num_classes).float()
     weights = counts.sum() / (num_classes * counts.clamp_min(1.0))
     return weights
 

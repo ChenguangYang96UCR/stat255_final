@@ -37,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description="Train an ISIC 2019 unimodal or multimodal classifier.")
     parser.add_argument("--config", default="config.yaml")
     parser.add_argument("--task", choices=["binary", "multiclass"])
+    parser.add_argument("--seed", type=int)
     parser.add_argument("--model-type", choices=["metadata_linear", "metadata_mlp", "image", "multimodal"])
     parser.add_argument("--fusion", choices=["concat", "gated", "decision", "attention"])
     parser.add_argument("--loss", choices=["ce", "weighted_ce", "focal"])
@@ -48,6 +49,7 @@ def main():
     args = parser.parse_args()
     cfg = load_config(args.config)
     if args.task: cfg["data"]["task"] = args.task
+    if args.seed is not None: cfg["seed"] = args.seed
     if args.model_type: cfg["model"]["type"] = args.model_type
     if args.fusion: cfg["model"]["fusion"] = args.fusion
     if args.loss: cfg["training"]["loss"] = args.loss
@@ -123,6 +125,10 @@ def main():
     ids, labels, probabilities = predict(model, loaders["test"], device)
     test_metrics = calculate_metrics(labels, probabilities, class_names)
     test_metrics["selected_epoch"] = best_epoch
+    test_metrics["seed"] = cfg["seed"]
+    test_metrics["task"] = task
+    test_metrics["model_type"] = cfg["model"]["type"]
+    test_metrics["fusion"] = cfg["model"].get("fusion")
     save_json(test_metrics, output_dir / "test_metrics.json")
     pred = pd.DataFrame({"image": ids, "label": labels, "prediction": probabilities.argmax(1)})
     for i, class_name in enumerate(class_names):

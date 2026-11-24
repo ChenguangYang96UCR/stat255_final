@@ -18,7 +18,7 @@ def run_epoch(model, loader, criterion, device, optimizer=None, alignment_weight
               alignment_temperature=0.1, amp=True):
     training = optimizer is not None
     model.train(training)
-    scaler = torch.cuda.amp.GradScaler(enabled=amp and device.type == "cuda")
+    scaler = torch.amp.GradScaler("cuda", enabled=amp and device.type == "cuda")
     losses, all_y, all_p = [], [], []
     for batch in tqdm(loader, leave=False, desc="train" if training else "eval"):
         image = batch["image"].to(device, non_blocking=True)

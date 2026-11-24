@@ -3,7 +3,7 @@ from sklearn.metrics import (accuracy_score, balanced_accuracy_score, brier_scor
                              classification_report, confusion_matrix, f1_score, roc_auc_score)
 from sklearn.preprocessing import label_binarize
 
-from . import CLASSES
+from . import BINARY_CLASSES, CLASSES
 
 
 def expected_calibration_error(y_true, probabilities, bins=15):
@@ -22,7 +22,16 @@ def expected_calibration_error(y_true, probabilities, bins=15):
 def calculate_metrics(y_true, probabilities, class_names=None):
     y_true = np.asarray(y_true)
     probabilities = np.asarray(probabilities)
-    class_names = list(class_names or CLASSES)
+    if class_names is None:
+        if probabilities.ndim == 2 and probabilities.shape[1] == 2:
+            class_names = BINARY_CLASSES
+        elif probabilities.ndim == 2 and probabilities.shape[1] == len(CLASSES):
+            class_names = CLASSES
+        else:
+            raise ValueError(
+                f"Cannot infer class names from probability shape {probabilities.shape}."
+            )
+    class_names = list(class_names)
     num_classes = len(class_names)
     if probabilities.ndim != 2 or probabilities.shape[1] != num_classes:
         raise ValueError(
