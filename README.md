@@ -136,3 +136,64 @@ python -m pytest -q
 ```
 
 The tests cover load-time metadata/image filtering, metadata preprocessing, and group leakage in the split.
+
+## Nested cross-validation input importance
+
+Use the nested CV script to measure the importance of image, age, sex, and anatomical site. It compares the full concat model with four leave-one-input-out models on the same outer folds:
+
+```bash
+nohup python nested_cv_importance.py \
+  --config config.yaml \
+  --output-dir outputs/nested_cv_importance \
+  > nested_cv_importance.log 2>&1 &
+```
+
+The outer five folds estimate test performance. The inner five folds select learning rate, weight decay, dropout, and the refit epoch count. Input importance is calculated within each outer fold as `full model metric - remove-input model metric`. Positive values mean that removing the input reduced performance.
+
+The default two-candidate grid requires 275 training runs: five ablation experiments times five outer folds times `(two candidates times five inner folds + one outer refit)`. Use a small development run before starting the full job:
+
+```bash
+python nested_cv_importance.py \
+  --outer-folds 2 \
+  --inner-folds 2 \
+  --epochs 1 \
+  --experiments full no_age
+```
+
+Final outputs include `outer_fold_assignments.csv`, `outer_fold_results.csv`, `performance_summary.csv`, `input_importance_per_fold.csv`, and `input_importance_summary.csv`.
+
+## Nested cross-validation classification comparison
+
+All classification architectures can also be evaluated with outer 5-fold and inner 5-fold grouped cross-validation:
+
+```bash
+nohup python nested_cv_classification.py \
+  --config config.yaml \
+  --output-dir outputs/nested_cv_classification \
+  > nested_cv_classification.log 2>&1 &
+```
+
+The inner folds select the hyperparameter candidate and refit epoch count. Each selected model is retrained on the complete outer-training partition and evaluated once on the outer-test partition. The final classification results are the mean and sample standard deviation across the five outer folds.
+
+With ten classifiers and two hyperparameter candidates, the full comparison requires 550 training runs. A short test is:
+
+```bash
+python nested_cv_classification.py \
+  --outer-folds 2 \
+  --inner-folds 2 \
+  --epochs 1 \
+  --experiments image concat \
+  --output-dir outputs/nested_cv_classification_smoke
+```
+
+```bash
+nohup python nested_cv_classification.py \
+  --config config.yaml \
+  --outer-folds 5 \
+  --inner-folds 5 \
+  --output-dir outputs/nested_cv_classification \
+  > nested_cv_classification.log 2>&1 &
+```
+
+
+The main outputs are `outer_fold_results.csv`, `selected_hyperparameters.csv`, and `classification_summary.csv`.
